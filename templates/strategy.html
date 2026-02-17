@@ -1,0 +1,44 @@
+<html lang="ru">
+    <head>
+        <title>{{ .strategy.Title }} — Подробная информация</title>
+        <link rel="stylesheet" href="/static/css/styles.css">
+    </head>
+    <body>
+        <header class="header-center">
+            <a href="/" class="header-logo">
+                <img src="/static/img/logo.png" alt="ShardDB" class="header-logo__icon">
+            </a>
+        </header>
+        <div class="detail-wrapper">
+            <a href="/" class="back-link">← Вернуться к каталогу</a>
+            <div class="detail-card">
+                <img class="detail-card__image" src="http://localhost:9000/test/{{ .strategy.Image }}" alt="{{ .strategy.Title }}">
+                <div class="detail-card__body">
+                    <h1 class="detail-card__title">{{ .strategy.Title }}</h1>
+                    <div class="detail-card__meta-row">
+                        <span class="detail-card__badge detail-card__badge--green">{{ .strategy.KeyType }}</span>
+                        <span class="detail-card__badge detail-card__badge--blue">~{{ .strategy.AvgResponseTime }} мс</span>
+                    </div>
+                    <p class="detail-card__meta"><strong>Равномерность:</strong> {{ .strategy.Uniformity }}</p>
+                    <p class="detail-card__meta"><strong>Область применения:</strong> {{ .strategy.UseCase }}</p>
+                    <p class="detail-card__description">{{ .strategy.Description }}</p>
+                    <hr class="detail-card__separator">
+                    {{ if .hasCalcInfo }}
+                    <h2 class="detail-card__section-title">Параметры в заявке</h2>
+                    <div class="calc-info-block">
+                        <div class="calc-info-block__row">
+                            <span><strong>Количество шардов:</strong> {{ .calcStrat.ShardCount }}</span>
+                        </div>
+                        <div class="calc-info-block__row">
+                            <span><strong>Приоритет:</strong> {{ .calcStrat.Priority }}</span>
+                        </div>
+                        <div class="calc-info-block__row">
+                            <span><strong>Комментарий:</strong> {{ .calcStrat.Comment }}</span>
+                        </div>
+                    </div>
+                    {{ end }}
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

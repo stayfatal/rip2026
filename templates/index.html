@@ -1,0 +1,46 @@
+<html lang="ru">
+    <head>
+        <title>Стратегии шардирования — Каталог</title>
+        <link rel="stylesheet" href="/static/css/styles.css">
+    </head>
+    <body>
+        <header class="header-center">
+            <a href="/" class="header-logo">
+                <img src="/static/img/logo.png" alt="ShardDB" class="header-logo__icon">
+            </a>
+            <form action="/" method="GET">
+                <input type="text" name="query" class="search-input" placeholder="Поиск стратегий по названию..." value="{{ .query }}">
+                <button type="submit" class="search-btn">Найти</button>
+            </form>
+        </header>
+        <div class="space">
+            {{ range .calculations }}
+            <a href="/calculations/{{ .ID }}" class="calculation-card">
+                <div class="calculation-card__title">{{ .Title }}</div>
+                <div class="calculation-card__id">
+                    Заявка: <span class="calculation-card__link">№ {{ .ID }}</span>
+                </div>
+                <div class="calculation-card__info">
+                    <span>Стратегий: <strong>{{ .StrategyCount }}</strong></span>
+                    <span>Данные: <strong>{{ .DataVolume }} ГБ</strong></span>
+                    <span>Запросов/сек: <strong>{{ .QueryCount }}</strong></span>
+                    <span>Среднее время отклика: <span class="calculation-card__badge">{{ printf "%.1f" .ResultResponseTime }} мс</span></span>
+                </div>
+            </a>
+            {{ end }}
+            <div class="container">
+                {{ range .strategies }}
+                <a href="/strategies/{{ .ID }}" class="card">
+                    <img src="http://localhost:9000/test/{{ .Image }}" alt="{{ .Title }}">
+                    <div class="card__body">
+                        <h2 class="card__title">{{ .Title }}</h2>
+                        <p class="card__key-type">{{ .KeyType }}</p>
+                        <p class="card__response-time">~{{ .AvgResponseTime }} мс</p>
+                        <p class="card__use-case">{{ .UseCase }}</p>
+                    </div>
+                </a>
+                {{ end }}
+            </div>
+        </div>
+    </body>
+</html>
