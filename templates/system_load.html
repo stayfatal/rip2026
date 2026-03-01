@@ -1,0 +1,43 @@
+<html lang="ru">
+    <head>
+        <title>{{ .load.Title }}</title>
+        <link rel="stylesheet" href="/static/css/styles.css">
+    </head>
+    <body>
+        <header>
+            <a href="/" class="header-home">
+                <img src="/static/img/logo.png" alt="ShardDB" class="header-home__icon">
+            </a>
+        </header>
+        <div class="system-load-detail">
+            <div class="system-load-detail__header-card">
+                <h1 class="system-load-detail__title">{{ .load.Title }}</h1>
+                <p class="system-load-detail__description">{{ .load.Description }}</p>
+            </div>
+            <table class="load-table">
+                <thead>
+                    <tr>
+                        <th class="load-table__col-photo">Изображение</th>
+                        <th>Стратегия</th>
+                        <th>Данные (ГБ)</th>
+                        <th>Запросов/сек</th>
+                        <th>Время отклика</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ range .load.Strategies }}
+                    <tr>
+                        <td class="load-table__col-photo">
+                            <img src="http://localhost:9000/test/{{ .Strategy.Image }}" alt="{{ .Strategy.Title }}">
+                        </td>
+                        <td>{{ .Strategy.Title }}</td>
+                        <td>{{ .DataVolume }}</td>
+                        <td>{{ .QueryCount }}</td>
+                        <td class="load-table__col-result">{{ printf "%.1f" .ResponseTime }} мс</td>
+                    </tr>
+                    {{ end }}
+                </tbody>
+            </table>
+        </div>
+    </body>
+</html>

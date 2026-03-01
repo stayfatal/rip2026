@@ -1,59 +1,43 @@
-/*
- * Стили скопированы с mongodb.com (референс-сайт):
- *
- * 1. Цветовая палитра — 3 основных цвета:
- *    - #001E2B (тёмный синий) — header, основной тёмный текст, фон навигации
- *    - #00ED64 (ярко-зелёный) — акцентный цвет: кнопки, CTA, hover ссылок
- *    - #FFFFFF (белый) — фон страниц, фон карточек
- *
- * 2. Шрифт "Euclid Circular A" — основной шрифт mongodb.com
- *    (с fallback на sans-serif)
- *
- * 3. Hover-эффекты — плавные transitions на карточках и кнопках
- *    (скопировано из .css-13me7co / ddp-experiment блока)
- *
- * 4. Форма карточек — border-radius: 24px, padding: 48px,
- *    box-shadow с rgba(0, 30, 43, 0.08)
- *    (скопировано из product section на mongodb.com)
- */
-
 :root {
-    --mdb-green-main: #00ed64;
-    --mdb-green-hover: #13AA52;
-    --mdb-green-dark: #00684a;
-    --mdb-green-darker: #023430;
-    --mdb-blue-dark: #001e2b;
-    --mdb-blue-card: #061621;
-    --mdb-blue-link: #009ffd;
-    --mdb-gray-text: #21313c;
-    --mdb-gray-sub: #5d6c74;
-    --mdb-gray-border: #e8edeb;
-    --mdb-white-bg: #f5f7fa;
-    --mdb-green-light-bg: #e3fcf7;
-    --mdb-yellow: #e9ff99;
+    --black: #000000;
+    --dark-bg: #0a0f14;
+    --card-bg: #111820;
+    --card-bg-hover: #1a2330;
+    --emerald-dirty: #00684a;
+    --emerald-dark: #014e3d;
+    --emerald-darker: #023430;
+    --acid: #b1ff05;
+    --acid-hover: #9ae004;
+    --green-bright: #00ed64;
+    --green-mid: #13aa52;
+    --text-primary: #e8edeb;
+    --text-secondary: #889397;
+    --text-muted: #5d6c74;
+    --border: #1c2d38;
+    --border-light: #27455c;
 }
 
 * {
     margin: 0;
     padding: 0;
     font-family: "Euclid Circular A", "Noto Sans KR", "Noto Sans SC", sans-serif;
-    color: var(--mdb-gray-text);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
 }
 
 body {
-    background: var(--mdb-white-bg);
+    background: var(--dark-bg);
     overflow-x: hidden;
 }
 
 a {
-    color: var(--mdb-green-dark);
+    color: var(--emerald-dirty);
     text-decoration: none;
     transition: color 0.2s ease;
 }
 
 a:hover {
-    color: var(--mdb-green-main);
+    color: var(--acid);
 }
 
 img {
@@ -63,89 +47,146 @@ img {
 
 /* ===== Header ===== */
 
-header,
-.header-center {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: 16px;
-    height: 72px;
-    width: 100%;
-    padding: 0 24px;
-    box-sizing: border-box;
-    background-color: var(--mdb-blue-dark);
-}
-
-header .header-logo,
-.header-center .header-logo {
-    justify-self: start;
-}
-
-header form,
-.header-center form {
-    justify-self: center;
+header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    height: 64px;
+    width: 100%;
+    padding: 0 32px;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, var(--black) 70%, var(--emerald-darker));
+    border-bottom: 2px solid var(--emerald-dark);
 }
 
-.header-logo__icon {
+.header-home {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.header-home__icon {
     display: block;
-    height: 72px;
+    height: 80px;
     width: auto;
     object-fit: contain;
     filter: brightness(0) saturate(100%) invert(72%) sepia(98%) saturate(427%) hue-rotate(91deg);
 }
 
+.header-home__text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--emerald-dirty);
+    letter-spacing: 0.5px;
+    transition: color 0.2s ease;
+}
+
+.header-home:hover .header-home__text {
+    color: var(--acid);
+}
+
+/* ===== Toolbar (поиск + иконка заявки) ===== */
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px 32px;
+    background: var(--black);
+    border-bottom: 1px solid var(--border);
+}
+
+.search-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .search-input {
-    width: 320px;
+    width: 360px;
     height: 40px;
     padding: 0 14px;
     border-radius: 8px;
-    border: 1px solid var(--mdb-gray-border);
+    border: 1px solid var(--border-light);
     font-size: 14px;
     box-sizing: border-box;
     font-family: "Euclid Circular A", sans-serif;
-    color: var(--mdb-blue-dark);
-    background: #fff;
+    color: var(--text-primary);
+    background: var(--card-bg);
+    transition: border-color 0.2s ease;
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
 }
 
 .search-input:focus {
-    border-color: var(--mdb-green-main);
+    border-color: var(--acid);
     outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 237, 100, 0.2);
+    box-shadow: 0 0 0 2px rgba(177, 255, 5, 0.15);
 }
 
 .search-btn {
     height: 40px;
-    padding: 0 20px;
+    padding: 0 22px;
     border: none;
     border-radius: 8px;
     font-size: 14px;
     font-weight: 600;
     font-family: "Euclid Circular A", sans-serif;
-    background-color: var(--mdb-green-main);
-    color: var(--mdb-blue-dark);
+    background-color: var(--acid);
+    color: var(--black);
     cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
 .search-btn:hover {
-    background-color: var(--mdb-green-hover);
-    color: #fff;
+    background-color: var(--acid-hover);
 }
 
-/* ===== Ссылка "Назад" ===== */
+/* ===== Иконка заявки (system_load) ===== */
 
-.back-link {
-    display: inline-block;
-    margin-bottom: 20px;
-    font-size: 0.95rem;
-    color: var(--mdb-green-dark);
-    font-weight: 500;
+.system-load-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    color: var(--emerald-dirty);
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
 }
 
-.back-link:hover {
-    color: var(--mdb-green-main);
+.system-load-icon:hover {
+    border-color: var(--acid);
+    color: var(--acid);
+    background: var(--card-bg-hover);
+}
+
+.system-load-icon svg {
+    color: inherit;
+}
+
+.system-load-icon__badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--acid);
+    color: var(--black);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    box-sizing: border-box;
 }
 
 /* ===== Основной контейнер ===== */
@@ -157,70 +198,7 @@ header form,
     padding: 30px 20px 60px;
 }
 
-/* ===== Карточка заявки на главной (скопировано с mongodb.com ddp-experiment блока) ===== */
-
-a.calculation-card {
-    display: block;
-    background-color: var(--mdb-blue-card);
-    border-radius: 24px;
-    padding: 24px 32px;
-    margin-bottom: 32px;
-    transition: box-shadow 0.3s ease, transform 0.2s ease;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-a.calculation-card:hover {
-    box-shadow: 0 4px 24px rgba(0, 237, 100, 0.15);
-    transform: translateY(-2px);
-}
-
-.calculation-card__title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: #ffffff;
-}
-
-.calculation-card__id {
-    font-size: 1rem;
-    margin-bottom: 10px;
-    color: #ffffff;
-}
-
-.calculation-card__link {
-    font-weight: 600;
-    color: var(--mdb-green-main);
-}
-
-.calculation-card__info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px 32px;
-    font-size: 0.95rem;
-}
-
-.calculation-card__info span {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: #ffffff;
-}
-
-.calculation-card__info strong {
-    color: #ffffff;
-}
-
-.calculation-card__badge {
-    background-color: var(--mdb-green-main);
-    color: #ffffff;
-    font-weight: 600;
-    padding: 2px 10px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
-
-/* ===== Сетка карточек (скопировано с mongodb.com product grid) ===== */
+/* ===== Сетка карточек ===== */
 
 .container {
     display: grid;
@@ -228,7 +206,7 @@ a.calculation-card:hover {
     gap: 24px;
 }
 
-/* ===== Карточка стратегии (скопировано с mongodb.com card-light вариант) ===== */
+/* ===== Карточка стратегии ===== */
 
 a.card {
     display: flex;
@@ -236,20 +214,19 @@ a.card {
     width: 100%;
     min-height: 300px;
     font-size: 14px;
-    border-radius: 24px;
-    background-color: #ffffff;
-    border: 1px solid var(--mdb-gray-border);
-    transition: box-shadow 0.3s ease, transform 0.2s ease;
+    border-radius: 16px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
+    transition: box-shadow 0.3s ease, transform 0.2s ease, border-color 0.2s ease;
     overflow: hidden;
     text-decoration: none;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 30, 43, 0.08);
 }
 
 a.card:hover {
-    box-shadow: 0 4px 16px rgba(0, 30, 43, 0.15);
+    box-shadow: 0 4px 24px rgba(177, 255, 5, 0.08);
     transform: translateY(-2px);
-    color: inherit;
+    border-color: var(--emerald-dirty);
 }
 
 a.card img {
@@ -257,48 +234,52 @@ a.card img {
     height: 200px;
     margin: 12px 12px 0;
     object-fit: cover;
-    background-color: var(--mdb-green-light-bg);
+    border-radius: 8px;
+    background-color: var(--emerald-darker);
 }
 
 .card__body {
     padding: 16px 24px 20px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     flex: 1;
 }
 
 .card__title {
     font-size: 16px;
     font-weight: 600;
-    color: var(--mdb-blue-dark);
+    color: var(--text-primary);
     margin: 0;
 }
 
-.card__key-type {
-    font-size: 13px;
-    color: var(--mdb-green-dark);
-    font-weight: 600;
-    margin: 0;
+.card__coefficients {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
-.card__response-time {
-    font-size: 13px;
-    color: var(--mdb-blue-link);
-    font-weight: 600;
-    margin: 0;
-}
-
-.card__use-case {
+.card__coeff {
+    padding: 3px 10px;
+    border-radius: 6px;
     font-size: 12px;
-    color: var(--mdb-gray-sub);
-    font-weight: 400;
-    line-height: 1.4;
-    margin: 4px 0 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.card__coeff--latency {
+    background: rgba(177, 255, 5, 0.15);
+    color: var(--acid);
+}
+
+.card__coeff--throughput {
+    background: rgba(0, 237, 100, 0.12);
+    color: var(--green-bright);
+}
+
+.card__coeff--reliability {
+    background: rgba(0, 104, 74, 0.2);
+    color: var(--emerald-dirty);
 }
 
 /* ===== Детальная страница стратегии ===== */
@@ -310,18 +291,25 @@ a.card img {
 }
 
 .detail-card {
-    background-color: #ffffff;
-    border-radius: 24px;
-    border: 1px solid var(--mdb-gray-border);
+    background-color: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border);
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 30, 43, 0.08);
 }
 
-.detail-card__image {
+/* Контейнер видео 2:3 (портрет, wibes) — без чёрных полей */
+.detail-card__video-wrap {
+    aspect-ratio: 3 / 2;
     width: 100%;
-    height: 360px;
+    overflow: hidden;
+    background-color: var(--black);
+}
+
+.detail-card__video {
+    width: 100%;
+    height: 100%;
+    display: block;
     object-fit: cover;
-    background-color: var(--mdb-green-light-bg);
 }
 
 .detail-card__body {
@@ -331,234 +319,195 @@ a.card img {
 .detail-card__title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--mdb-blue-dark);
+    color: var(--text-primary);
     margin-bottom: 12px;
 }
 
-.detail-card__meta-row {
+.detail-card__coefficients {
     display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 10px;
+    margin-bottom: 16px;
     flex-wrap: wrap;
 }
 
 .detail-card__badge {
-    padding: 4px 12px;
-    border-radius: 6px;
+    padding: 5px 14px;
+    border-radius: 8px;
     font-size: 13px;
     font-weight: 600;
 }
 
-.detail-card__badge--green {
-    background-color: var(--mdb-green-main);
-    color: #ffffff;
+.detail-card__badge--latency {
+    background: rgba(177, 255, 5, 0.15);
+    color: var(--acid);
 }
 
-.detail-card__badge--blue {
-    background-color: var(--mdb-blue-link);
-    color: #ffffff;
+.detail-card__badge--throughput {
+    background: rgba(0, 237, 100, 0.12);
+    color: var(--green-bright);
 }
 
-.detail-card__meta {
-    font-size: 0.95rem;
-    color: var(--mdb-gray-sub);
-    margin-bottom: 4px;
-}
-
-.detail-card__meta strong {
-    color: var(--mdb-gray-text);
+.detail-card__badge--reliability {
+    background: rgba(0, 104, 74, 0.2);
+    color: var(--emerald-dirty);
 }
 
 .detail-card__description {
     font-size: 0.93rem;
-    color: #444;
+    color: var(--text-secondary);
     line-height: 1.7;
-    margin-top: 16px;
     margin-bottom: 0;
 }
 
 .detail-card__separator {
     border: none;
-    border-top: 1px solid var(--mdb-gray-border);
+    border-top: 1px solid var(--border);
     margin: 24px 0;
 }
 
 .detail-card__section-title {
     font-size: 1.1rem;
     font-weight: 700;
-    color: var(--mdb-blue-dark);
+    color: var(--text-primary);
     margin-bottom: 12px;
 }
 
-/* ===== Блок информации о расчёте (на странице стратегии) ===== */
+/* ===== Блок параметров нагрузки (на странице стратегии) ===== */
 
-.calc-info-block {
-    background-color: var(--mdb-green-light-bg);
-    border: 1px solid var(--mdb-gray-border);
+.load-info-block {
+    background-color: rgba(0, 104, 74, 0.1);
+    border: 1px solid var(--border-light);
     border-radius: 12px;
     padding: 16px 24px;
 }
 
-.calc-info-block__row {
+.load-info-block__row {
     font-size: 0.95rem;
-    color: var(--mdb-gray-sub);
+    color: var(--text-secondary);
     margin-bottom: 6px;
 }
 
-.calc-info-block__row:last-child {
+.load-info-block__row:last-child {
     margin-bottom: 0;
 }
 
-.calc-info-block__row strong {
-    color: var(--mdb-gray-text);
+.load-info-block__row strong {
+    color: var(--text-primary);
 }
 
-/* ===== Страница заявки (расчёт нагрузки) ===== */
+.load-info-block__row--result {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
 
-.calculation-detail {
+.load-info-block__row--result strong {
+    color: var(--acid);
+}
+
+/* ===== Страница заявки (system_load) ===== */
+
+.system-load-detail {
     max-width: 1200px;
     margin: 30px auto;
     padding: 0 20px;
 }
 
-.calculation-detail__header-card {
-    background-color: #ffffff;
-    border: 2px solid var(--mdb-green-main);
-    border-radius: 24px;
+.system-load-detail__header-card {
+    background-color: var(--card-bg);
+    border: 2px solid var(--emerald-dirty);
+    border-radius: 16px;
     padding: 32px 48px;
     margin-bottom: 32px;
-    box-shadow: 0 2px 8px rgba(0, 30, 43, 0.08);
 }
 
-.calculation-detail__title {
+.system-load-detail__title {
     font-size: 1.4rem;
     font-weight: 700;
-    color: var(--mdb-blue-dark);
-    margin-bottom: 16px;
+    color: var(--text-primary);
+    margin-bottom: 12px;
 }
 
-.calculation-detail__info {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+.system-load-detail__description {
     font-size: 0.95rem;
-    color: var(--mdb-gray-sub);
-}
-
-.calculation-detail__info-item strong {
-    color: var(--mdb-gray-text);
-}
-
-.calculation-detail__result {
-    margin-top: 16px;
-    padding: 12px 18px;
-    background-color: var(--mdb-green-main);
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #ffffff;
-    display: inline-block;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
 }
 
 /* ===== Таблица стратегий в заявке ===== */
 
-.calc-table {
+.load-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0 10px;
 }
 
-.calc-table thead tr {
-    background-color: #ffffff;
-}
-
-.calc-table thead th {
+.load-table thead th {
     text-align: left;
     font-weight: 600;
     font-size: 13px;
-    color: var(--mdb-gray-sub);
+    color: var(--text-muted);
     padding: 10px 12px;
-    background-color: #ffffff;
-    border-top: 1px solid var(--mdb-gray-border);
-    border-bottom: 1px solid var(--mdb-gray-border);
+    background-color: var(--card-bg);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
     white-space: nowrap;
 }
 
-.calc-table thead th:first-child {
-    border-left: 1px solid var(--mdb-gray-border);
+.load-table thead th:first-child {
+    border-left: 1px solid var(--border);
     border-radius: 12px 0 0 12px;
 }
 
-.calc-table thead th:last-child {
-    border-right: 1px solid var(--mdb-gray-border);
+.load-table thead th:last-child {
+    border-right: 1px solid var(--border);
     border-radius: 0 12px 12px 0;
 }
 
-.calc-table tbody tr {
-    background-color: #ffffff;
+.load-table tbody tr {
+    background-color: var(--card-bg);
     transition: border-color 0.2s ease;
 }
 
-.calc-table tbody tr:hover td {
-    border-color: var(--mdb-green-main);
+.load-table tbody tr:hover td {
+    border-color: var(--emerald-dirty);
 }
 
-.calc-table tbody td {
+.load-table tbody td {
     padding: 12px;
     font-size: 15px;
-    color: var(--mdb-gray-sub);
-    border-top: 1px solid var(--mdb-gray-border);
-    border-bottom: 1px solid var(--mdb-gray-border);
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
     vertical-align: middle;
 }
 
-.calc-table tbody td:first-child {
-    border-left: 1px solid var(--mdb-gray-border);
+.load-table tbody td:first-child {
+    border-left: 1px solid var(--border);
     border-radius: 12px 0 0 12px;
 }
 
-.calc-table tbody td:last-child {
-    border-right: 1px solid var(--mdb-gray-border);
+.load-table tbody td:last-child {
+    border-right: 1px solid var(--border);
     border-radius: 0 12px 12px 0;
 }
 
-.calc-table__col-photo {
+.load-table__col-photo {
     width: 80px;
 }
 
-.calc-table__col-photo img {
+.load-table__col-photo img {
     width: 80px;
     height: 80px;
     border-radius: 8px;
     object-fit: cover;
-    background-color: var(--mdb-green-light-bg);
+    background-color: var(--emerald-darker);
 }
 
-.calc-table__col-shards {
-    color: var(--mdb-green-dark) !important;
+.load-table__col-result {
+    color: var(--acid) !important;
     font-weight: 600;
-}
-
-.calc-table__col-comment {
-    min-width: 240px;
-    max-width: 400px;
-}
-
-.comment-input {
-    width: 100%;
-    min-height: 44px;
-    padding: 8px 12px;
-    border: 1px solid var(--mdb-gray-border);
-    font-size: 13px;
-    border-radius: 8px;
-    box-sizing: border-box;
-    background: transparent;
-    font-family: "Euclid Circular A", sans-serif;
-    color: var(--mdb-gray-text);
-    line-height: 1.4;
-    resize: none;
-    white-space: pre-wrap;
-    word-wrap: break-word;
 }
 
 /* ===== Адаптивность ===== */
@@ -582,13 +531,17 @@ a.card img {
         padding: 20px 24px;
     }
 
-    .calculation-detail__header-card {
+    .system-load-detail__header-card {
         padding: 20px 24px;
     }
 
-    header, .header-center {
+    header {
         padding: 0 16px;
-        gap: 16px;
+    }
+
+    .toolbar {
+        padding: 12px 16px;
+        flex-wrap: wrap;
     }
 
     .search-input {

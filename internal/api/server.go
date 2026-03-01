@@ -28,7 +28,7 @@ func StartServer() {
 
 	r.GET("/", h.GetStrategies)
 	r.GET("/strategies/:id", h.GetStrategy)
-	r.GET("/calculations/:id", h.GetCalculation)
+	r.GET("/system_loads/:id", h.GetSystemLoad)
 
 	r.Run()
 	log.Println("Server down")

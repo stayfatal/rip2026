@@ -14,102 +14,97 @@ func NewRepository() (*Repository, error) {
 	return &Repository{}, nil
 }
 
-// ShardingStrategy — услуга: стратегия шардирования данных в распределённой системе.
+// ShardingStrategy — услуга: стратегия шардирования с коэффициентами.
 type ShardingStrategy struct {
-	ID              int
-	Title           string
-	Description     string
-	Image           string // ключ изображения в Minio
-	KeyType         string // тип ключа шардирования
-	Uniformity      string // равномерность распределения
-	UseCase         string // область применения
-	AvgResponseTime int    // базовое время отклика (мс)
-}
-
-// LoadCalculation — заявка: расчёт нагрузки для набора стратегий.
-type LoadCalculation struct {
 	ID                     int
 	Title                  string
 	Description            string
-	Status                 string
-	DataVolume             int     // объём данных (ГБ)
-	QueryCount             int     // запросов в секунду
-	ResultResponseTime     float64 // итоговое время отклика (мс)
-	ResultLoadDistribution string  // распределение нагрузки
-	Strategies             []CalculationStrategy
-	StrategyCount          int
+	Image                  string  // ключ изображения в Minio
+	Video                  string  // ключ видео в Minio (wibes)
+	LatencyCoefficient     float64 // коэффициент задержки
+	ThroughputCoefficient  float64 // коэффициент пропускной способности
+	ReliabilityCoefficient float64 // коэффициент надёжности
 }
 
-// CalculationStrategy — связь м-м: стратегия внутри заявки.
-type CalculationStrategy struct {
-	Strategy   ShardingStrategy
-	ShardCount int    // количество шардов (поле м-м)
-	Priority   int    // приоритет
-	Comment    string // комментарий пользователя
+// SystemLoad — заявка: описание системы для расчёта нагрузки.
+type SystemLoad struct {
+	ID            int
+	Title         string
+	Description   string // описание системы текстом
+	Strategies    []SystemLoadStrategy
+	StrategyCount int
+}
+
+// SystemLoadStrategy — связь м-м: данные и запросы, результат — время отклика.
+type SystemLoadStrategy struct {
+	Strategy     ShardingStrategy
+	DataVolume   int     // объём данных (ГБ)
+	QueryCount   int     // запросов в секунду
+	ResponseTime float64 // результат: время отклика (мс)
 }
 
 // GetStrategies возвращает все стратегии шардирования.
 func (r *Repository) GetStrategies() ([]ShardingStrategy, error) {
 	strategies := []ShardingStrategy{
 		{
-			ID:              1,
-			Title:           "Range Sharding",
-			Description:     "Range Sharding (шардирование по диапазону) — стратегия распределения данных, при которой записи разбиваются на непрерывные интервалы по значению ключа шардирования. Каждому шарду назначается определённый диапазон ключей, например: записи с ID от 1 до 1 000 000 хранятся на первом шарде, от 1 000 001 до 2 000 000 — на втором и так далее. Это позволяет эффективно выполнять range-запросы, поскольку данные расположены последовательно. Однако при неравномерном распределении записей могут возникнуть хотспоты — ситуации, когда один шард получает непропорционально большую нагрузку. Range Sharding хорошо подходит для временных рядов, логов и данных с естественным порядком.",
-			Image:           "range_sharding.jpg",
-			KeyType:         "Диапазон",
-			Uniformity:      "Низкая",
-			UseCase:         "Временные ряды, логи, аналитика",
-			AvgResponseTime: 45,
+			ID:                     1,
+			Title:                  "Range Sharding",
+			Description:            "Разбивка по диапазону ключа. Для временных рядов, логов и быстрых range-запросов.",
+			Image:                  "range_sharding.jpg",
+			Video:                  "range_sharding.mp4",
+			LatencyCoefficient:     1.8,
+			ThroughputCoefficient:  0.6,
+			ReliabilityCoefficient: 0.70,
 		},
 		{
-			ID:              2,
-			Title:           "Hash Sharding",
-			Description:     "Hash Sharding (хэш-шардирование) — стратегия, при которой данные распределяются по шардам на основе хэш-функции, применённой к ключу шардирования. Хэш-значение определяет, на какой шард попадёт запись. Это обеспечивает равномерное распределение данных и нагрузки, что устраняет проблему хотспотов. Однако при использовании хэш-шардирования теряется возможность эффективно выполнять range-запросы, так как соседние по ключу записи могут оказаться на разных шардах. Hash Sharding — это стандартный выбор для систем общего назначения, где важна равномерная загрузка узлов.",
-			Image:           "hash_sharding.jpg",
-			KeyType:         "Хэш",
-			Uniformity:      "Высокая",
-			UseCase:         "Системы общего назначения, OLTP",
-			AvgResponseTime: 25,
+			ID:                     2,
+			Title:                  "Hash Sharding",
+			Description:            "Распределение по хэшу ключа. Равномерная нагрузка, стандарт для OLTP.",
+			Image:                  "hash_sharding.jpg",
+			Video:                  "hash_sharding.mp4",
+			LatencyCoefficient:     1.0,
+			ThroughputCoefficient:  1.2,
+			ReliabilityCoefficient: 0.90,
 		},
 		{
-			ID:              3,
-			Title:           "Geo Sharding",
-			Description:     "Geo Sharding (географическое шардирование) — стратегия распределения данных по географическому признаку. Записи направляются на шарды, расположенные ближе к конечному пользователю, что минимизирует задержку при обращении к данным. Например, данные европейских пользователей хранятся на серверах в Европе, а азиатских — в Азии. Эта стратегия критически важна для глобальных приложений с требованиями к низкой латентности и соблюдению законодательства о локализации данных (GDPR). Главный недостаток — сложность перебалансировки при изменении географии пользовательской базы.",
-			Image:           "geo_sharding.jpg",
-			KeyType:         "Географический",
-			Uniformity:      "Средняя",
-			UseCase:         "Геоданные, CDN, глобальные сервисы",
-			AvgResponseTime: 35,
+			ID:                     3,
+			Title:                  "Geo Sharding",
+			Description:            "Данные рядом с пользователем по географии. Низкая латентность и локализация (GDPR).",
+			Image:                  "geo_sharding.jpg",
+			Video:                  "geo_sharding.mp4",
+			LatencyCoefficient:     1.4,
+			ThroughputCoefficient:  0.8,
+			ReliabilityCoefficient: 0.85,
 		},
 		{
-			ID:              4,
-			Title:           "Directory-Based Sharding",
-			Description:     "Directory-Based Sharding (шардирование на основе каталога) — стратегия, при которой используется отдельная таблица-каталог для хранения соответствий между ключом шардирования и конкретным шардом. При каждом запросе система обращается к каталогу, чтобы определить местоположение данных. Это даёт максимальную гибкость: записи можно перемещать между шардами без изменения логики приложения. Однако каталог становится единой точкой отказа (SPOF) и потенциальным узким местом производительности. Directory-Based Sharding применяется в системах со сложными паттернами доступа, где другие стратегии не подходят.",
-			Image:           "directory_sharding.jpg",
-			KeyType:         "Каталог",
-			Uniformity:      "Высокая",
-			UseCase:         "Мультитенантные системы, гибкое распределение",
-			AvgResponseTime: 55,
+			ID:                     4,
+			Title:                  "Directory-Based Sharding",
+			Description:            "Каталог «ключ → шард». Максимальная гибкость маршрутизации, мультитенантность.",
+			Image:                  "directory_sharding.jpg",
+			Video:                  "directory_sharding.mp4",
+			LatencyCoefficient:     2.2,
+			ThroughputCoefficient:  0.5,
+			ReliabilityCoefficient: 0.95,
 		},
 		{
-			ID:              5,
-			Title:           "Composite Sharding",
-			Description:     "Composite Sharding (составное шардирование) — гибридная стратегия, комбинирующая два или более подхода к шардированию. Например, данные сначала разделяются по географии (Geo Sharding), а затем внутри каждого региона — по хэшу (Hash Sharding). Это позволяет получить преимущества обоих подходов: низкую латентность за счёт локальности данных и равномерную нагрузку внутри региона. Composite Sharding требует более сложной инфраструктуры и конфигурации, но обеспечивает наилучшую производительность для крупномасштабных глобальных систем с разнородными паттернами доступа.",
-			Image:           "composite_sharding.jpg",
-			KeyType:         "Составной",
-			Uniformity:      "Высокая",
-			UseCase:         "Крупные глобальные платформы, микросервисы",
-			AvgResponseTime: 30,
+			ID:                     5,
+			Title:                  "Composite Sharding",
+			Description:            "Гибрид: гео + хэш (или иные комбинации). Глобальные системы с равномерной нагрузкой.",
+			Image:                  "composite_sharding.jpg",
+			Video:                  "composite_sharding.mp4",
+			LatencyCoefficient:     1.2,
+			ThroughputCoefficient:  1.0,
+			ReliabilityCoefficient: 0.92,
 		},
 		{
-			ID:              6,
-			Title:           "Dynamic Sharding",
-			Description:     "Dynamic Sharding (динамическое шардирование) — стратегия, при которой количество и границы шардов автоматически адаптируются к текущей нагрузке и объёму данных. Система мониторит размер шардов и при превышении порога автоматически разделяет перегруженный шард на два (split), а при снижении нагрузки — объединяет шарды (merge). Это обеспечивает автоматическое масштабирование без ручного вмешательства. Dynamic Sharding используется в облачных базах данных, таких как MongoDB Atlas и Google Cloud Spanner, где эластичность является ключевым требованием.",
-			Image:           "dynamic_sharding.jpg",
-			KeyType:         "Автоматический",
-			Uniformity:      "Высокая",
-			UseCase:         "Облачные БД, эластичное масштабирование",
-			AvgResponseTime: 20,
+			ID:                     6,
+			Title:                  "Dynamic Sharding",
+			Description:            "Авто split/merge шардов по нагрузке. Облачные БД, эластичное масштабирование.",
+			Image:                  "dynamic_sharding.jpg",
+			Video:                  "dynamic_sharding.mp4",
+			LatencyCoefficient:     0.8,
+			ThroughputCoefficient:  1.5,
+			ReliabilityCoefficient: 0.88,
 		},
 	}
 
@@ -135,7 +130,7 @@ func (r *Repository) GetStrategy(id int) (ShardingStrategy, error) {
 	return ShardingStrategy{}, fmt.Errorf("стратегия не найдена")
 }
 
-// GetStrategiesByTitle возвращает стратегии, содержащие подстроку в любом текстовом поле.
+// GetStrategiesByTitle возвращает стратегии, содержащие подстроку в названии или описании.
 func (r *Repository) GetStrategiesByTitle(query string) ([]ShardingStrategy, error) {
 	strategies, err := r.GetStrategies()
 	if err != nil {
@@ -145,36 +140,32 @@ func (r *Repository) GetStrategiesByTitle(query string) ([]ShardingStrategy, err
 	q := strings.ToLower(query)
 	var result []ShardingStrategy
 	for _, s := range strategies {
-		if strings.Contains(strings.ToLower(s.Title), q) ||
-			strings.Contains(strings.ToLower(s.Description), q) ||
-			strings.Contains(strings.ToLower(s.KeyType), q) ||
-			strings.Contains(strings.ToLower(s.UseCase), q) ||
-			strings.Contains(strings.ToLower(s.Uniformity), q) {
+		if strings.Contains(strings.ToLower(s.Title), q) {
 			result = append(result, s)
 		}
 	}
 	return result, nil
 }
 
-// CalculateResponseTime вычисляет итоговое время отклика на основе параметров стратегии.
-func CalculateResponseTime(baseTime int, shardCount int, dataVolumeGB int) float64 {
-	if shardCount <= 0 {
-		shardCount = 1
+// CalculateResponseTime вычисляет время отклика по коэффициентам стратегии и параметрам нагрузки.
+func CalculateResponseTime(latencyCoeff, throughputCoeff float64, dataVolumeGB, queryCount int) float64 {
+	if throughputCoeff <= 0 {
+		throughputCoeff = 1
 	}
 	dataFactor := float64(dataVolumeGB) / 100.0
-	return float64(baseTime) * (1 + dataFactor) / float64(shardCount)
+	queryFactor := float64(queryCount) / 1000.0
+	return (dataFactor + queryFactor) * latencyCoeff / throughputCoeff * 10
 }
 
-// buildCalculation собирает заявку из записей.
-func (r *Repository) buildCalculation(id int, title string, description string, status string, dataVolume int, queryCount int, entries []struct {
+// buildSystemLoad собирает заявку из записей м-м.
+func (r *Repository) buildSystemLoad(id int, title, description string, entries []struct {
 	StrategyID int
-	ShardCount int
-	Priority   int
-	Comment    string
-}) (LoadCalculation, error) {
+	DataVolume int
+	QueryCount int
+}) (SystemLoad, error) {
 	strategies, err := r.GetStrategies()
 	if err != nil {
-		return LoadCalculation{}, err
+		return SystemLoad{}, err
 	}
 
 	stratMap := make(map[int]ShardingStrategy)
@@ -182,103 +173,87 @@ func (r *Repository) buildCalculation(id int, title string, description string, 
 		stratMap[s.ID] = s
 	}
 
-	var calcStrategies []CalculationStrategy
-	totalResponseTime := 0.0
+	var loadStrategies []SystemLoadStrategy
 
 	for _, e := range entries {
 		strat, ok := stratMap[e.StrategyID]
 		if !ok {
 			continue
 		}
-		rt := CalculateResponseTime(strat.AvgResponseTime, e.ShardCount, dataVolume)
-		calcStrategies = append(calcStrategies, CalculationStrategy{
-			Strategy:   strat,
-			ShardCount: e.ShardCount,
-			Priority:   e.Priority,
-			Comment:    e.Comment,
+		rt := CalculateResponseTime(strat.LatencyCoefficient, strat.ThroughputCoefficient, e.DataVolume, e.QueryCount)
+		loadStrategies = append(loadStrategies, SystemLoadStrategy{
+			Strategy:     strat,
+			DataVolume:   e.DataVolume,
+			QueryCount:   e.QueryCount,
+			ResponseTime: rt,
 		})
-		totalResponseTime += rt
 	}
 
-	avgResponseTime := 0.0
-	if len(calcStrategies) > 0 {
-		avgResponseTime = totalResponseTime / float64(len(calcStrategies))
-	}
-
-	return LoadCalculation{
-		ID:                     id,
-		Title:                  title,
-		Description:            description,
-		Status:                 status,
-		DataVolume:             dataVolume,
-		QueryCount:             queryCount,
-		ResultResponseTime:     avgResponseTime,
-		ResultLoadDistribution: fmt.Sprintf("%.1f%% на шард", 100.0/float64(len(calcStrategies))),
-		Strategies:             calcStrategies,
-		StrategyCount:          len(calcStrategies),
+	return SystemLoad{
+		ID:            id,
+		Title:         title,
+		Description:   description,
+		Strategies:    loadStrategies,
+		StrategyCount: len(loadStrategies),
 	}, nil
 }
 
-// GetCalculations возвращает все заявки на расчёт нагрузки.
-func (r *Repository) GetCalculations() ([]LoadCalculation, error) {
+// GetSystemLoads возвращает все заявки на расчёт нагрузки.
+func (r *Repository) GetSystemLoads() ([]SystemLoad, error) {
 	entries := []struct {
 		StrategyID int
-		ShardCount int
-		Priority   int
-		Comment    string
+		DataVolume int
+		QueryCount int
 	}{
-		{1, 4, 1, "Для хранения логов по временным диапазонам"},
-		{2, 8, 2, "Основная стратегия для пользовательских данных"},
-		{3, 3, 3, "Геораспределение для EU и US регионов"},
-		{4, 2, 4, "Справочные таблицы с гибким маршрутизацией"},
-		{5, 6, 5, "Комбинация Geo + Hash для API-запросов"},
-		{6, 10, 6, "Автомасштабирование для пиковых нагрузок"},
+		{1, 200, 3000},
+		{2, 500, 8000},
+		{3, 150, 2000},
+		{4, 100, 1500},
+		{5, 300, 5000},
+		{6, 800, 12000},
 	}
 
-	calc, err := r.buildCalculation(
+	load, err := r.buildSystemLoad(
 		1,
-		"Расчёт нагрузки для e-commerce платформы",
-		"Комплексный расчёт распределения нагрузки для интернет-магазина с 50 млн пользователей. Включает анализ всех доступных стратегий шардирования с определением оптимального количества шардов и приоритетов для каждого типа данных.",
-		"Рассчитана",
-		500,
-		10000,
+		"Нагрузка e-commerce платформы",
+		"Интернет-магазин с 50 млн активных пользователей, обрабатывающий каталог товаров, заказы и пользовательские сессии. Система работает в трёх регионах (EU, US, Asia) с требованиями к низкой латентности и высокой доступности. Пиковые нагрузки приходятся на сезонные распродажи.",
 		entries,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return []LoadCalculation{calc}, nil
+	return []SystemLoad{load}, nil
 }
 
-// GetCalculation возвращает заявку по ID.
-func (r *Repository) GetCalculation(id int) (LoadCalculation, error) {
-	calcs, err := r.GetCalculations()
+// GetSystemLoad возвращает заявку по ID.
+func (r *Repository) GetSystemLoad(id int) (SystemLoad, error) {
+	loads, err := r.GetSystemLoads()
 	if err != nil {
-		return LoadCalculation{}, err
+		return SystemLoad{}, err
 	}
 
-	for _, c := range calcs {
-		if c.ID == id {
-			return c, nil
+	for _, l := range loads {
+		if l.ID == id {
+			return l, nil
 		}
 	}
-	return LoadCalculation{}, fmt.Errorf("заявка не найдена")
+	return SystemLoad{}, fmt.Errorf("заявка не найдена")
 }
 
-// GetCalculationForStrategy ищет заявку, содержащую данную стратегию.
-func (r *Repository) GetCalculationForStrategy(strategyID int) (*CalculationStrategy, error) {
-	calcs, err := r.GetCalculations()
+// GetSystemLoadForStrategy ищет заявку, содержащую данную стратегию, и возвращает запись м-м.
+func (r *Repository) GetSystemLoadForStrategy(strategyID int) (*SystemLoadStrategy, error) {
+	loads, err := r.GetSystemLoads()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, c := range calcs {
-		for _, cs := range c.Strategies {
-			if cs.Strategy.ID == strategyID {
-				return &cs, nil
+	for _, l := range loads {
+		for _, ls := range l.Strategies {
+			if ls.Strategy.ID == strategyID {
+				return &ls, nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("стратегия не найдена в заявке")
+	return nil, fmt.Errorf("стратегия не найдена в заявках")
 }

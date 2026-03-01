@@ -4,36 +4,38 @@
         <link rel="stylesheet" href="/static/css/styles.css">
     </head>
     <body>
-        <header class="header-center">
-            <a href="/" class="header-logo">
-                <img src="/static/img/logo.png" alt="ShardDB" class="header-logo__icon">
+        <header>
+            <a href="/" class="header-home">
+                <img src="/static/img/logo.png" alt="ShardDB" class="header-home__icon">
             </a>
         </header>
         <div class="detail-wrapper">
-            <a href="/" class="back-link">← Вернуться к каталогу</a>
             <div class="detail-card">
-                <img class="detail-card__image" src="http://localhost:9000/test/{{ .strategy.Image }}" alt="{{ .strategy.Title }}">
+                <div class="detail-card__video-wrap">
+                    <video class="detail-card__video" controls autoplay muted loop>
+                        <source src="http://localhost:9000/test/{{ .strategy.Video }}" type="video/mp4">
+                    </video>
+                </div>
                 <div class="detail-card__body">
                     <h1 class="detail-card__title">{{ .strategy.Title }}</h1>
-                    <div class="detail-card__meta-row">
-                        <span class="detail-card__badge detail-card__badge--green">{{ .strategy.KeyType }}</span>
-                        <span class="detail-card__badge detail-card__badge--blue">~{{ .strategy.AvgResponseTime }} мс</span>
+                    <div class="detail-card__coefficients">
+                        <span class="detail-card__badge detail-card__badge--latency">Задержка: {{ printf "%.1f" .strategy.LatencyCoefficient }}</span>
+                        <span class="detail-card__badge detail-card__badge--throughput">Пропускная: {{ printf "%.1f" .strategy.ThroughputCoefficient }}</span>
+                        <span class="detail-card__badge detail-card__badge--reliability">Надёжность: {{ printf "%.2f" .strategy.ReliabilityCoefficient }}</span>
                     </div>
-                    <p class="detail-card__meta"><strong>Равномерность:</strong> {{ .strategy.Uniformity }}</p>
-                    <p class="detail-card__meta"><strong>Область применения:</strong> {{ .strategy.UseCase }}</p>
                     <p class="detail-card__description">{{ .strategy.Description }}</p>
+                    {{ if .hasLoadInfo }}
                     <hr class="detail-card__separator">
-                    {{ if .hasCalcInfo }}
-                    <h2 class="detail-card__section-title">Параметры в заявке</h2>
-                    <div class="calc-info-block">
-                        <div class="calc-info-block__row">
-                            <span><strong>Количество шардов:</strong> {{ .calcStrat.ShardCount }}</span>
+                    <h2 class="detail-card__section-title">Параметры нагрузки</h2>
+                    <div class="load-info-block">
+                        <div class="load-info-block__row">
+                            <strong>Объём данных:</strong> {{ .loadStrat.DataVolume }} ГБ
                         </div>
-                        <div class="calc-info-block__row">
-                            <span><strong>Приоритет:</strong> {{ .calcStrat.Priority }}</span>
+                        <div class="load-info-block__row">
+                            <strong>Запросов/сек:</strong> {{ .loadStrat.QueryCount }}
                         </div>
-                        <div class="calc-info-block__row">
-                            <span><strong>Комментарий:</strong> {{ .calcStrat.Comment }}</span>
+                        <div class="load-info-block__row load-info-block__row--result">
+                            <strong>Время отклика:</strong> {{ printf "%.1f" .loadStrat.ResponseTime }} мс
                         </div>
                     </div>
                     {{ end }}

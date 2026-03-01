@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -22,7 +21,7 @@ func NewHandler(r *repository.Repository) *Handler {
 	}
 }
 
-// GetStrategies — обработчик главной страницы: список стратегий + карточка заявки.
+// GetStrategies — обработчик главной страницы: список стратегий + иконка заявки.
 func (h *Handler) GetStrategies(ctx *gin.Context) {
 	var strategies []repository.ShardingStrategy
 	var err error
@@ -40,7 +39,7 @@ func (h *Handler) GetStrategies(ctx *gin.Context) {
 		}
 	}
 
-	calculations, err := h.Repository.GetCalculations()
+	systemLoads, err := h.Repository.GetSystemLoads()
 	if err != nil {
 		logrus.Error(err)
 	}
@@ -48,7 +47,7 @@ func (h *Handler) GetStrategies(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "index.html", gin.H{
 		"strategies":   strategies,
 		"query":        searchQuery,
-		"calculations": calculations,
+		"system_loads": systemLoads,
 	})
 }
 
@@ -66,31 +65,30 @@ func (h *Handler) GetStrategy(ctx *gin.Context) {
 		logrus.Error(err)
 	}
 
-	calcStrat, err := h.Repository.GetCalculationForStrategy(id)
-	hasCalcInfo := err == nil && calcStrat != nil
+	loadStrat, err := h.Repository.GetSystemLoadForStrategy(id)
+	hasLoadInfo := err == nil && loadStrat != nil
 
 	ctx.HTML(http.StatusOK, "strategy.html", gin.H{
 		"strategy":    strategy,
-		"calcStrat":   calcStrat,
-		"hasCalcInfo": hasCalcInfo,
+		"loadStrat":   loadStrat,
+		"hasLoadInfo": hasLoadInfo,
 	})
 }
 
-// GetCalculation — обработчик страницы состава заявки (расчёта нагрузки).
-func (h *Handler) GetCalculation(ctx *gin.Context) {
+// GetSystemLoad — обработчик страницы заявки (описание системы и нагрузка).
+func (h *Handler) GetSystemLoad(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		logrus.Error(err)
 	}
 
-	calc, err := h.Repository.GetCalculation(id)
+	load, err := h.Repository.GetSystemLoad(id)
 	if err != nil {
 		logrus.Error(err)
 	}
 
-	ctx.HTML(http.StatusOK, "calculation.html", gin.H{
-		"calc":         calc,
-		"responseTime": fmt.Sprintf("%.1f", calc.ResultResponseTime),
+	ctx.HTML(http.StatusOK, "system_load.html", gin.H{
+		"load": load,
 	})
 }
