@@ -1,6 +1,6 @@
 <html lang="ru">
     <head>
-        <title>{{ .load.Title }}</title>
+        <title>Заявка — Расчёт нагрузки</title>
         <link rel="stylesheet" href="/static/css/styles.css">
     </head>
     <body>
@@ -11,9 +11,13 @@
         </header>
         <div class="system-load-detail">
             <div class="system-load-detail__header-card">
-                <h1 class="system-load-detail__title">{{ .load.Title }}</h1>
-                <p class="system-load-detail__description">{{ .load.Description }}</p>
+                <h1 class="system-load-detail__title">Заявка на расчёт нагрузки</h1>
+                <div class="system-load-detail__info">
+                    <div class="system-load-detail__info-item"><strong>ID заявки:</strong> {{ .system_load_id }}</div>
+                    <div class="system-load-detail__info-item"><strong>Стратегий в заявке:</strong> {{ len .items }}</div>
+                </div>
             </div>
+
             <table class="load-table">
                 <thead>
                     <tr>
@@ -25,19 +29,24 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{ range .load.Strategies }}
+                    {{ range .items }}
                     <tr>
                         <td class="load-table__col-photo">
-                            <img src="http://localhost:9000/test/{{ .Strategy.Image }}" alt="{{ .Strategy.Title }}">
+                            <img src="{{ $.minioUrl }}/{{ .Strategy.PhotoURL }}" alt="{{ .Strategy.Title }}">
                         </td>
                         <td>{{ .Strategy.Title }}</td>
                         <td>{{ .DataVolume }}</td>
                         <td>{{ .QueryCount }}</td>
-                        <td class="load-table__col-result">{{ printf "%.1f" .ResponseTime }} мс</td>
+                        <td class="load-table__col-result">{{ printf "%.1f" (num .ResponseTime) }} мс</td>
                     </tr>
                     {{ end }}
                 </tbody>
             </table>
+
+            <form method="POST" action="/system_loads/delete" style="margin-top: 24px;">
+                <input type="hidden" name="system_load_id" value="{{ .system_load_id }}">
+                <button type="submit" class="btn-delete">Удалить заявку</button>
+            </form>
         </div>
     </body>
 </html>

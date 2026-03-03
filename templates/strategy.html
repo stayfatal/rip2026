@@ -13,7 +13,7 @@
             <div class="detail-card">
                 <div class="detail-card__video-wrap">
                     <video class="detail-card__video" controls autoplay muted loop>
-                        <source src="http://localhost:9000/test/{{ .strategy.Video }}" type="video/mp4">
+                        <source src="{{ .minioUrl }}/{{ .strategy.Video }}" type="video/mp4">
                     </video>
                 </div>
                 <div class="detail-card__body">
@@ -24,21 +24,10 @@
                         <span class="detail-card__badge detail-card__badge--reliability">Надёжность: {{ printf "%.2f" .strategy.ReliabilityCoefficient }}</span>
                     </div>
                     <p class="detail-card__description">{{ .strategy.Description }}</p>
-                    {{ if .hasLoadInfo }}
-                    <hr class="detail-card__separator">
-                    <h2 class="detail-card__section-title">Параметры нагрузки</h2>
-                    <div class="load-info-block">
-                        <div class="load-info-block__row">
-                            <strong>Объём данных:</strong> {{ .loadStrat.DataVolume }} ГБ
-                        </div>
-                        <div class="load-info-block__row">
-                            <strong>Запросов/сек:</strong> {{ .loadStrat.QueryCount }}
-                        </div>
-                        <div class="load-info-block__row load-info-block__row--result">
-                            <strong>Время отклика:</strong> {{ printf "%.1f" .loadStrat.ResponseTime }} мс
-                        </div>
-                    </div>
-                    {{ end }}
+                    <form method="POST" action="/system_loads/add" style="margin-top: 24px;">
+                        <input type="hidden" name="strategy_id" value="{{ .strategy.StrategyID }}">
+                        <button type="submit" class="search-btn">Добавить в заявку</button>
+                    </form>
                 </div>
             </div>
         </div>
