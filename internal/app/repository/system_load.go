@@ -1,13 +1,16 @@
 package repository
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
-	"web_backend/internal/app/ds"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+
+	"web_backend/internal/app/ds"
+	"web_backend/internal/app/serializer"
 )
 
 func CalculateResponseTime(latencyCoeff, throughputCoeff float64, dataVolumeGB, queryCount int) float64 {
@@ -48,6 +51,106 @@ func (r *Repository) GetActiveSystemLoadID(creatorID uint) uint {
 	return loadID
 }
 
+func (r *Repository) CheckCurrentDraft(creatorID uint) (ds.SystemLoad, error) {
+	if creatorID == 0 {
+		return ds.SystemLoad{}, ErrNotAllowed
+	}
+	var load ds.SystemLoad
+	res := r.db.Where("creator_id = ? AND status = ?", creatorID, "draft").Limit(1).Find(&load)
+	if res.Error != nil {
+		return ds.SystemLoad{}, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ds.SystemLoad{}, ErrNoDraft
+	}
+	return load, nil
+}
+
+func (r *Repository) GetSystemLoadDraft(creatorID uint) (ds.SystemLoad, bool, error) {
+	load, err := r.CheckCurrentDraft(creatorID)
+	if errors.Is(err, ErrNoDraft) {
+		load = ds.SystemLoad{
+			Status:    "draft",
+			CreatedAt: time.Now(),
+			CreatorID: creatorID,
+		}
+		if err := r.db.Create(&load).Error; err != nil {
+			return ds.SystemLoad{}, false, err
+		}
+		return load, true, nil
+	}
+	if err != nil {
+		return ds.SystemLoad{}, false, err
+	}
+	return load, false, nil
+}
+
+func (r *Repository) GetModeratorAndCreatorLogin(load ds.SystemLoad) (string, string, error) {
+	var creator ds.Users
+	if err := r.db.Where("user_id = ?", load.CreatorID).First(&creator).Error; err != nil {
+		return "", "", err
+	}
+	var moderatorLogin string
+	if load.ModeratorID != nil && *load.ModeratorID != 0 {
+		var moderator ds.Users
+		if err := r.db.Where("user_id = ?", *load.ModeratorID).First(&moderator).Error; err != nil {
+			return "", "", err
+		}
+		moderatorLogin = moderator.Login
+	}
+	return creator.Login, moderatorLogin, nil
+}
+
+func (r *Repository) GetCompletedItemCount(loadID uint) (int, error) {
+	var count int64
+	err := r.db.Model(&ds.SystemLoadStrategy{}).
+		Where("system_load_id = ? AND response_time IS NOT NULL", loadID).
+		Count(&count).Error
+	return int(count), err
+}
+
+func (r *Repository) GetAllSystemLoads(from, to time.Time, status string) ([]ds.SystemLoad, error) {
+	var loads []ds.SystemLoad
+	sub := r.db.Where("status != ? AND status != ?", "deleted", "draft")
+	if !from.IsZero() {
+		sub = sub.Where("forming_date >= ?", from)
+	}
+	if !to.IsZero() {
+		sub = sub.Where("forming_date < ?", to.Add(time.Hour*24))
+	}
+	if status != "" {
+		sub = sub.Where("status = ?", status)
+	}
+	err := sub.Order("system_load_id").Find(&loads).Error
+	return loads, err
+}
+
+func (r *Repository) GetSingleSystemLoad(id int) (ds.SystemLoad, error) {
+	if id < 0 {
+		return ds.SystemLoad{}, errors.New("неверное id")
+	}
+	var load ds.SystemLoad
+	err := r.db.Where("system_load_id = ?", id).First(&load).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ds.SystemLoad{}, fmt.Errorf("%w: заявка с id %d", ErrNotFound, id)
+		}
+		return ds.SystemLoad{}, err
+	}
+	if load.Status == "deleted" {
+		return ds.SystemLoad{}, fmt.Errorf("%w: заявка удалена", ErrNotAllowed)
+	}
+	return load, nil
+}
+
+func (r *Repository) GetSystemLoadItems(loadID int) ([]ds.SystemLoadStrategy, error) {
+	var items []ds.SystemLoadStrategy
+	err := r.db.Where("system_load_id = ?", loadID).
+		Preload("Strategy").
+		Find(&items).Error
+	return items, err
+}
+
 func (r *Repository) GetSystemLoad(id int, creatorID uint) ([]ds.SystemLoadStrategy, *ds.SystemLoad, error) {
 	var load ds.SystemLoad
 	err := r.db.Where("system_load_id = ? AND creator_id = ? AND status != ?",
@@ -85,53 +188,227 @@ func (r *Repository) AddStrategy(strategyID uint, creatorID uint) error {
 		return err
 	}
 
+	var strategy ds.ShardingStrategy
+	if err := r.db.Where("strategy_id = ? AND is_deleted = ?", strategyID, false).First(&strategy).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("%w: стратегия с id %d", ErrNotFound, strategyID)
+		}
+		return err
+	}
+
 	var count int64
 	r.db.Model(&ds.SystemLoadStrategy{}).
 		Where("system_load_id = ? AND strategy_id = ?", load.SystemLoadID, strategyID).
 		Count(&count)
 
-	if count == 0 {
-		var strategy ds.ShardingStrategy
-		if err := r.db.First(&strategy, strategyID).Error; err != nil {
-			return err
-		}
+	if count > 0 {
+		return fmt.Errorf("%w: стратегия %d уже в заявке %d", ErrAlreadyExists, strategyID, load.SystemLoadID)
+	}
 
+	rt := CalculateResponseTime(
+		strategy.LatencyCoefficient,
+		strategy.ThroughputCoefficient,
+		100, 1000,
+	)
+
+	item := ds.SystemLoadStrategy{
+		SystemLoadID: load.SystemLoadID,
+		StrategyID:   strategyID,
+		DataVolume:   100,
+		QueryCount:   1000,
+		ResponseTime: &rt,
+	}
+	return r.db.Create(&item).Error
+}
+
+func (r *Repository) DeleteStrategyFromSystemLoad(systemLoadID, strategyID int) (ds.SystemLoad, error) {
+	var load ds.SystemLoad
+	err := r.db.Where("system_load_id = ?", systemLoadID).First(&load).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ds.SystemLoad{}, fmt.Errorf("%w: заявка с id %d", ErrNotFound, systemLoadID)
+		}
+		return ds.SystemLoad{}, err
+	}
+	if load.Status != "draft" {
+		return ds.SystemLoad{}, fmt.Errorf("%w: можно удалять только из черновика", ErrNotAllowed)
+	}
+	err = r.db.Where("system_load_id = ? AND strategy_id = ?", systemLoadID, strategyID).
+		Delete(&ds.SystemLoadStrategy{}).Error
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	return load, nil
+}
+
+func (r *Repository) EditStrategyInSystemLoad(systemLoadID, strategyID int, j serializer.SystemLoadStrategyJSON) (ds.SystemLoadStrategy, error) {
+	var item ds.SystemLoadStrategy
+	err := r.db.Where("system_load_id = ? AND strategy_id = ?", systemLoadID, strategyID).
+		First(&item).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ds.SystemLoadStrategy{}, fmt.Errorf("%w: стратегия в заявке", ErrNotFound)
+		}
+		return ds.SystemLoadStrategy{}, err
+	}
+
+	var load ds.SystemLoad
+	if err := r.db.Where("system_load_id = ?", systemLoadID).First(&load).Error; err != nil {
+		return ds.SystemLoadStrategy{}, err
+	}
+	if load.Status != "draft" {
+		return ds.SystemLoadStrategy{}, fmt.Errorf("%w: можно редактировать только черновик", ErrNotAllowed)
+	}
+
+	updates := map[string]interface{}{
+		"data_volume": j.DataVolume,
+		"query_count": j.QueryCount,
+	}
+
+	var strategy ds.ShardingStrategy
+	if err := r.db.First(&strategy, strategyID).Error; err == nil {
 		rt := CalculateResponseTime(
 			strategy.LatencyCoefficient,
 			strategy.ThroughputCoefficient,
-			100, 1000,
+			j.DataVolume, j.QueryCount,
 		)
-
-		item := ds.SystemLoadStrategy{
-			SystemLoadID: load.SystemLoadID,
-			StrategyID:   strategyID,
-			DataVolume:   100,
-			QueryCount:   1000,
-			ResponseTime: &rt,
-		}
-		if err := r.db.Create(&item).Error; err != nil {
-			return err
-		}
+		updates["response_time"] = rt
 	}
 
-	return nil
+	err = r.db.Model(&item).Updates(updates).Error
+	if err != nil {
+		return ds.SystemLoadStrategy{}, err
+	}
+	r.db.Where("system_load_id = ? AND strategy_id = ?", systemLoadID, strategyID).
+		Preload("Strategy").First(&item)
+	return item, nil
 }
 
-// DeleteSystemLoad — логическое удаление заявки через raw SQL UPDATE (без ORM).
-func (r *Repository) DeleteSystemLoad(loadID uint) error {
-	query := `
-		UPDATE system_loads
-		SET status = 'deleted'
-		WHERE system_load_id = $1;
-	`
-	result := r.db.Exec(query, loadID)
-	if result.Error != nil {
-		return result.Error
+func (r *Repository) EditSystemLoad(id int, j serializer.SystemLoadJSON) (ds.SystemLoad, error) {
+	var load ds.SystemLoad
+	err := r.db.Where("system_load_id = ? AND status != ?", id, "deleted").First(&load).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ds.SystemLoad{}, fmt.Errorf("%w: заявка с id %d", ErrNotFound, id)
+		}
+		return ds.SystemLoad{}, err
 	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("system_load with id %d not found", loadID)
+	if load.Status != "draft" {
+		return ds.SystemLoad{}, fmt.Errorf("%w: можно редактировать только черновик", ErrNotAllowed)
 	}
-	return nil
+	updates := serializer.SystemLoadFromJSON(j)
+	err = r.db.Model(&load).Updates(updates).Error
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	r.db.Where("system_load_id = ?", id).First(&load)
+	return load, nil
+}
+
+func (r *Repository) FormSystemLoad(id int) (ds.SystemLoad, error) {
+	load, err := r.GetSingleSystemLoad(id)
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	if load.Status != "draft" {
+		return ds.SystemLoad{}, fmt.Errorf("%w: только черновик можно сформировать", ErrNotAllowed)
+	}
+	if load.CreatorID != uint(r.GetCreatorID()) {
+		return ds.SystemLoad{}, fmt.Errorf("%w: вы не создатель этой заявки", ErrNotAllowed)
+	}
+
+	items, err := r.GetSystemLoadItems(int(load.SystemLoadID))
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	if len(items) == 0 {
+		return ds.SystemLoad{}, errors.New("нельзя сформировать пустую заявку")
+	}
+
+	for _, item := range items {
+		var strategy ds.ShardingStrategy
+		if err := r.db.First(&strategy, item.StrategyID).Error; err != nil {
+			return ds.SystemLoad{}, err
+		}
+		rt := CalculateResponseTime(
+			strategy.LatencyCoefficient,
+			strategy.ThroughputCoefficient,
+			item.DataVolume, item.QueryCount,
+		)
+		r.db.Model(&ds.SystemLoadStrategy{}).
+			Where("system_load_id = ? AND strategy_id = ?", load.SystemLoadID, item.StrategyID).
+			Update("response_time", rt)
+	}
+
+	formingDate := time.Now()
+	err = r.db.Model(&load).Updates(map[string]interface{}{
+		"status":       "formed",
+		"forming_date": formingDate,
+	}).Error
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	load.Status = "formed"
+	load.FormingDate = &formingDate
+	return load, nil
+}
+
+func (r *Repository) FinishSystemLoad(id int, status string) (ds.SystemLoad, error) {
+	if status != "completed" && status != "rejected" {
+		return ds.SystemLoad{}, errors.New("неверный статус: допустимы completed или rejected")
+	}
+	user, err := r.GetUserByID(r.GetUserID())
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	if !user.IsModerator {
+		return ds.SystemLoad{}, fmt.Errorf("%w: вы не модератор", ErrNotAllowed)
+	}
+	load, err := r.GetSingleSystemLoad(id)
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	if load.Status != "formed" {
+		return ds.SystemLoad{}, fmt.Errorf("%w: завершить/отклонить можно только сформированную заявку", ErrNotAllowed)
+	}
+	finishDate := time.Now()
+	err = r.db.Model(&load).Updates(map[string]interface{}{
+		"status":       status,
+		"finish_date":  finishDate,
+		"moderator_id": user.UserID,
+	}).Error
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	load.Status = status
+	load.FinishDate = sql.NullTime{Time: finishDate, Valid: true}
+	uid := user.UserID
+	load.ModeratorID = &uid
+	return load, nil
+}
+
+func (r *Repository) DeleteSystemLoad(loadID int) (ds.SystemLoad, error) {
+	load, err := r.GetSingleSystemLoad(loadID)
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	if load.Status != "draft" {
+		return ds.SystemLoad{}, fmt.Errorf("%w: удалить можно только черновик", ErrNotAllowed)
+	}
+	if load.CreatorID != uint(r.GetCreatorID()) {
+		return ds.SystemLoad{}, fmt.Errorf("%w: вы не создатель этой заявки", ErrNotAllowed)
+	}
+	formingDate := time.Now()
+	err = r.db.Model(&load).Updates(map[string]interface{}{
+		"status":       "deleted",
+		"forming_date": formingDate,
+	}).Error
+	if err != nil {
+		return ds.SystemLoad{}, err
+	}
+	load.Status = "deleted"
+	load.FormingDate = &formingDate
+	return load, nil
 }
 
 func (r *Repository) IsDraftSystemLoad(loadID int, creatorID uint) (bool, error) {
