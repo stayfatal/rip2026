@@ -7,6 +7,8 @@ import (
 	"web_backend/internal/app/repository"
 	"web_backend/internal/pkg"
 
+	_ "web_backend/docs"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

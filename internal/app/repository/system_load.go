@@ -109,7 +109,7 @@ func (r *Repository) GetCompletedItemCount(loadID uint) (int, error) {
 	return int(count), err
 }
 
-func (r *Repository) GetAllSystemLoads(from, to time.Time, status string) ([]ds.SystemLoad, error) {
+func (r *Repository) GetAllSystemLoads(from, to time.Time, status string, creatorID uint) ([]ds.SystemLoad, error) {
 	var loads []ds.SystemLoad
 	sub := r.db.Where("status != ? AND status != ?", "deleted", "draft")
 	if !from.IsZero() {
@@ -120,6 +120,9 @@ func (r *Repository) GetAllSystemLoads(from, to time.Time, status string) ([]ds.
 	}
 	if status != "" {
 		sub = sub.Where("status = ?", status)
+	}
+	if creatorID != 0 {
+		sub = sub.Where("creator_id = ?", creatorID)
 	}
 	err := sub.Order("system_load_id").Find(&loads).Error
 	return loads, err
@@ -149,24 +152,6 @@ func (r *Repository) GetSystemLoadItems(loadID int) ([]ds.SystemLoadStrategy, er
 		Preload("Strategy").
 		Find(&items).Error
 	return items, err
-}
-
-func (r *Repository) GetSystemLoad(id int, creatorID uint) ([]ds.SystemLoadStrategy, *ds.SystemLoad, error) {
-	var load ds.SystemLoad
-	err := r.db.Where("system_load_id = ? AND creator_id = ? AND status != ?",
-		id, creatorID, "deleted").First(&load).Error
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var items []ds.SystemLoadStrategy
-	err = r.db.Where("system_load_id = ?", id).
-		Preload("Strategy").
-		Find(&items).Error
-	if err != nil {
-		return nil, nil, err
-	}
-	return items, &load, nil
 }
 
 func (r *Repository) AddStrategy(strategyID uint, creatorID uint) error {
@@ -305,7 +290,7 @@ func (r *Repository) EditSystemLoad(id int, j serializer.SystemLoadJSON) (ds.Sys
 	return load, nil
 }
 
-func (r *Repository) FormSystemLoad(id int) (ds.SystemLoad, error) {
+func (r *Repository) FormSystemLoad(id int, creatorID uint) (ds.SystemLoad, error) {
 	load, err := r.GetSingleSystemLoad(id)
 	if err != nil {
 		return ds.SystemLoad{}, err
@@ -313,7 +298,7 @@ func (r *Repository) FormSystemLoad(id int) (ds.SystemLoad, error) {
 	if load.Status != "draft" {
 		return ds.SystemLoad{}, fmt.Errorf("%w: только черновик можно сформировать", ErrNotAllowed)
 	}
-	if load.CreatorID != uint(r.GetCreatorID()) {
+	if load.CreatorID != creatorID {
 		return ds.SystemLoad{}, fmt.Errorf("%w: вы не создатель этой заявки", ErrNotAllowed)
 	}
 
@@ -353,16 +338,9 @@ func (r *Repository) FormSystemLoad(id int) (ds.SystemLoad, error) {
 	return load, nil
 }
 
-func (r *Repository) FinishSystemLoad(id int, status string) (ds.SystemLoad, error) {
+func (r *Repository) FinishSystemLoad(id int, status string, moderatorID uint) (ds.SystemLoad, error) {
 	if status != "completed" && status != "rejected" {
 		return ds.SystemLoad{}, errors.New("неверный статус: допустимы completed или rejected")
-	}
-	user, err := r.GetUserByID(r.GetUserID())
-	if err != nil {
-		return ds.SystemLoad{}, err
-	}
-	if !user.IsModerator {
-		return ds.SystemLoad{}, fmt.Errorf("%w: вы не модератор", ErrNotAllowed)
 	}
 	load, err := r.GetSingleSystemLoad(id)
 	if err != nil {
@@ -375,19 +353,18 @@ func (r *Repository) FinishSystemLoad(id int, status string) (ds.SystemLoad, err
 	err = r.db.Model(&load).Updates(map[string]interface{}{
 		"status":       status,
 		"finish_date":  finishDate,
-		"moderator_id": user.UserID,
+		"moderator_id": moderatorID,
 	}).Error
 	if err != nil {
 		return ds.SystemLoad{}, err
 	}
 	load.Status = status
 	load.FinishDate = sql.NullTime{Time: finishDate, Valid: true}
-	uid := user.UserID
-	load.ModeratorID = &uid
+	load.ModeratorID = &moderatorID
 	return load, nil
 }
 
-func (r *Repository) DeleteSystemLoad(loadID int) (ds.SystemLoad, error) {
+func (r *Repository) DeleteSystemLoad(loadID int, creatorID uint) (ds.SystemLoad, error) {
 	load, err := r.GetSingleSystemLoad(loadID)
 	if err != nil {
 		return ds.SystemLoad{}, err
@@ -395,7 +372,7 @@ func (r *Repository) DeleteSystemLoad(loadID int) (ds.SystemLoad, error) {
 	if load.Status != "draft" {
 		return ds.SystemLoad{}, fmt.Errorf("%w: удалить можно только черновик", ErrNotAllowed)
 	}
-	if load.CreatorID != uint(r.GetCreatorID()) {
+	if load.CreatorID != creatorID {
 		return ds.SystemLoad{}, fmt.Errorf("%w: вы не создатель этой заявки", ErrNotAllowed)
 	}
 	formingDate := time.Now()
@@ -409,14 +386,4 @@ func (r *Repository) DeleteSystemLoad(loadID int) (ds.SystemLoad, error) {
 	load.Status = "deleted"
 	load.FormingDate = &formingDate
 	return load, nil
-}
-
-func (r *Repository) IsDraftSystemLoad(loadID int, creatorID uint) (bool, error) {
-	var load ds.SystemLoad
-	err := r.db.Select("status").Where("system_load_id = ? AND creator_id = ?",
-		loadID, creatorID).First(&load).Error
-	if err != nil {
-		return false, err
-	}
-	return load.Status == "draft", nil
 }

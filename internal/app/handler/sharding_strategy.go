@@ -14,6 +14,15 @@ import (
 	"web_backend/internal/app/serializer"
 )
 
+// GetStrategies godoc
+// @Summary Получить список стратегий
+// @Description Возвращает все стратегии или фильтрует по названию
+// @Tags strategies
+// @Produce json
+// @Param Title query string false "Название стратегии для поиска"
+// @Success 200 {array} serializer.ShardingStrategyJSON "Список стратегий"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Router /strategies [get]
 func (h *Handler) GetStrategies(ctx *gin.Context) {
 	var strategies []ds.ShardingStrategy
 	var err error
@@ -34,6 +43,17 @@ func (h *Handler) GetStrategies(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, resp)
 }
 
+// GetStrategy godoc
+// @Summary Получить стратегию по ID
+// @Description Возвращает информацию о стратегии по идентификатору
+// @Tags strategies
+// @Produce json
+// @Param id path int true "ID стратегии"
+// @Success 200 {object} serializer.ShardingStrategyJSON "Данные стратегии"
+// @Failure 400 {object} map[string]string "Неверный ID"
+// @Failure 404 {object} map[string]string "Стратегия не найдена"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Router /strategies/{id} [get]
 func (h *Handler) GetStrategy(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -53,6 +73,18 @@ func (h *Handler) GetStrategy(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, serializer.ShardingStrategyToJSON(*strategy))
 }
 
+// CreateStrategy godoc
+// @Summary Создать стратегию
+// @Description Создает новую стратегию шардинга (с возможной загрузкой изображения/видео)
+// @Tags strategies
+// @Accept json
+// @Produce json
+// @Param strategy body serializer.ShardingStrategyJSON true "Данные новой стратегии"
+// @Success 201 {object} serializer.ShardingStrategyJSON "Созданная стратегия"
+// @Failure 400 {object} map[string]string "Неверные данные"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Security ApiKeyAuth
+// @Router /strategies [post]
 func (h *Handler) CreateStrategy(ctx *gin.Context) {
 	contentType := ctx.GetHeader("Content-Type")
 	var j serializer.ShardingStrategyJSON
