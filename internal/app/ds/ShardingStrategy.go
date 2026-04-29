@@ -4,6 +4,7 @@ type ShardingStrategy struct {
 	StrategyID             uint    `gorm:"primaryKey;column:strategy_id"`
 	Title                  string  `gorm:"type:varchar(255);not null"`
 	Description            string  `gorm:"type:varchar(1000);not null"`
+	ShortDescriptionEN     string  `gorm:"column:short_description_en;type:varchar(100);not null;default:''"`
 	IsDeleted              bool    `gorm:"type:boolean;not null;default:false"`
 	PhotoURL               string  `gorm:"column:photo_url;type:varchar(255)"`
 	Video                  string  `gorm:"type:varchar(255)"`
